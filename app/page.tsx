@@ -2,9 +2,10 @@ import { getHabits } from './actions';
 import HabitForm from '@/components/HabitForm';
 import HabitCard from '@/components/HabitCard';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export default async function Home() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions); // Pass options!
   const habits = await getHabits();
 
   return (

@@ -3,11 +3,23 @@
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { authOptions } from '@/lib/auth';
 
 // Helper to get current user ID
 async function getUserId() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions); // Pass options here too!
   if (!session?.user?.email) return null;
+
+  // Since we added user.id to session callback, we could just return session.user.id
+  // But strictly speaking we should query DB or trust session.
+  // For safety/consistency with previous logic, lets lookup by email if needed, 
+  // OR rely on session.user.id if I fixed the types.
+  // For now, I'll stick to email lookup OR just use the session.user.id if available 
+  // to save a query, but the callback I added to lib/auth.ts puts id on session.
+  
+  if ((session.user as any).id) {
+      return (session.user as any).id as string;
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
