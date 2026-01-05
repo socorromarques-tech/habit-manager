@@ -2,14 +2,7 @@
 
 import { deleteHabit, toggleHabitLog } from '@/app/actions';
 import { Habit, HabitLog } from '@prisma/client';
-import { cn } from '@/lib/utils'; // Assuming cn utility is here, or I need to create it/use clsx direct
-import clsx from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-// Simple cn utility if not exist
-function cn(...inputs: (string | undefined | null | false)[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/utils';
 
 type HabitWithLogs = Habit & {
   logs: HabitLog[];
