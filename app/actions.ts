@@ -214,3 +214,8 @@ export async function getSummary(): Promise<DaySummary[]> {
 
   return summary;
 }
+
+// Backward compatibility or for SummaryTable usage
+export async function toggleHabitLog(habitId: string, date: Date) {
+  return updateHabitProgress(habitId, date);
+}
