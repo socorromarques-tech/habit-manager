@@ -10,22 +10,16 @@ import 'dayjs/locale/pt-br';
 
 dayjs.locale('pt-br');
 
-// Logic to generate dates correctly aligned with weekdays
 const generateSummaryDates = () => {
   const startOfYear = dayjs().startOf('year');
-  const startWeekday = startOfYear.day(); // 0 (Sun) to 6 (Sat)
+  const startWeekday = startOfYear.day(); 
   
   const dates = [];
   
-  // 1. Add Placeholders for days before Jan 1st to align Row 0 with Sunday
   for (let i = 0; i < startWeekday; i++) {
     dates.push(null);
   }
 
-  // 2. Add Actual Dates
-  // We want roughly 6 months (18 weeks is ~4 months, let's do more? User said "Year" implied inside Ignite? 
-  // Ignite usually shows full year. Let's do a decent chunk, e.g. 26 weeks (half year) 
-  // or just enough to fill the screen. 18 * 7 is fine for now, just fixed alignment.
   for (let i = 0; i < 18 * 7; i++) {
     dates.push(startOfYear.add(i, 'days'));
   }
@@ -59,18 +53,18 @@ export function SummaryTable() {
             ))}
           </div>
 
-          {/* Gri - Dates */}
+          {/* Grid */}
           <div className="grid grid-rows-7 grid-flow-col gap-2">
             {summaryDates.map((dateObj, i) => {
               if (!dateObj) {
-                  return <div key={`empty-${i}`} className="w-8 h-8" />; // Placeholder
+                  return <div key={`empty-${i}`} className="w-8 h-8" />;
               }
 
-              // Normal HabitDay Rendering
               const date = dateObj.toDate();
               const dayInSummary = summary.find((day) => dayjs(date).isSame(day.date, 'day'));
               const isSelected = dayjs(date).isSame(selectedDate, 'day');
-              const isFuture = dayjs(date).endOf('day').isAfter(dayjs());
+              // Correct logic: Is the date strictly AFTER today (ignoring time)?
+              const isFuture = dayjs(date).isAfter(dayjs(), 'day');
               
               return (
                 <HabitDay 
@@ -79,7 +73,7 @@ export function SummaryTable() {
                   defaultCompleted={dayInSummary?.completed}
                   amount={dayInSummary?.total}
                   isSelected={isSelected}
-                  onClick={() => !isFuture && setSelectedDate(date)} // Prevent selecting future in grid? Or just disable toggle? Let's allow select to see "Locked" state.
+                  onClick={() => !isFuture && setSelectedDate(date)} 
                   isFuture={isFuture}
                 />
               );
@@ -111,14 +105,14 @@ function HabitDay({ date, defaultCompleted = 0, amount = 0, isSelected, onClick,
     'bg-green-600 border-green-500': completedPercentage >= 60 && completedPercentage < 80,
     'bg-green-500 border-green-400': completedPercentage >= 80,
     'ring-2 ring-white ring-offset-2 ring-offset-background': isSelected,
-    'opacity-50 cursor-not-allowed': isFuture // Optional: Visually dim future days
+    'opacity-50 cursor-not-allowed': isFuture
   });
 
   return (
     <div 
-      onClick={isFuture ? undefined : onClick} // Disable click on future in grid
+      onClick={isFuture ? undefined : onClick}
       className={bgClass}
-      title={dayjs(date).format('DD/MM/YYYY')} // re-added title for debugging date, helpful for user verification
+      title={dayjs(date).format('DD/MM/YYYY')}
     />
   );
 }
@@ -126,7 +120,8 @@ function HabitDay({ date, defaultCompleted = 0, amount = 0, isSelected, onClick,
 function DayDetailsPanel({ date, onUpdate }: { date: Date, onUpdate: () => void }) {
   const [habits, setHabits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const isFuture = dayjs(date).endOf('day').isAfter(dayjs());
+  // Correct logic here too
+  const isFuture = dayjs(date).isAfter(dayjs(), 'day');
 
   useEffect(() => {
      setLoading(true);
