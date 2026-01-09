@@ -1,48 +1,40 @@
-import { getHabits } from './actions';
-import HabitForm from '@/components/HabitForm';
-import HabitCard from '@/components/HabitCard';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { SummaryTable } from "@/components/SummaryTable";
+import HabitForm from "@/components/HabitForm";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions); // Pass options!
-  const habits = await getHabits();
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 text-center">
+        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
+          Habit Manager
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-[600px]">
+          Controle sua rotina, alcance suas metas. O jeito simples e visual de evoluir.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="py-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Meus Hábitos</h1>
-          <p className="text-muted-foreground">Visualize sua consistência diária.</p>
-        </div>
-      </header>
+    <div className="w-full max-w-5xl mx-auto flex flex-col gap-16 py-8">
+      
+      {/* Header / Form Section */}
+      <div className="flex flex-col gap-4">
+         <h2 className="text-3xl font-bold">Meu Painel</h2>
+         <div className="w-full max-w-xl">
+            <HabitForm />
+         </div>
+      </div>
 
-      {session ? (
-        <>
-          <section className="rounded-xl border bg-card p-6 shadow-sm">
-             <h2 className="mb-4 text-lg font-semibold">Novo Hábito</h2>
-             <HabitForm />
-          </section>
+      {/* The Ignite Grid */}
+      <div className="w-full">
+        <SummaryTable />
+      </div>
 
-          <section className="grid gap-6">
-            {habits.map((habit) => (
-              <HabitCard key={habit.id} habit={habit} />
-            ))}
-            {habits.length === 0 && (
-              <p className="text-center text-muted-foreground py-10">
-                Você ainda não tem nenhum hábito cadastrado.
-              </p>
-            )}
-          </section>
-        </>
-      ) : (
-        <section className="rounded-xl border bg-card p-12 text-center shadow-sm">
-          <h2 className="mb-2 text-2xl font-bold">Bem-vindo ao Habit Manager</h2>
-          <p className="text-muted-foreground mb-6">
-            Faça login para começar a rastrear seus hábitos.
-          </p>
-        </section>
-      )}
     </div>
   );
 }
