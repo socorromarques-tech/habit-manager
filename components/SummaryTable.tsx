@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { clsx } from 'clsx';
-import { getSummary, toggleHabitLog, getHabits } from '@/app/actions';
+import { getSummary, toggleHabitLog, getHabits, deleteHabit } from '@/app/actions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import 'dayjs/locale/pt-br';
@@ -23,27 +23,24 @@ export function SummaryTable() {
   
   useEffect(() => {
      getSummary().then(setSummary);
-  }, []);
+  }, [selectedDate]); // Refresh summary when interactions might have changed it
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
       
-      {/* Left Column: The Heatmap Grid */}
+      {/* Left: Heatmap Grid */}
       <div className="flex-1 overflow-x-auto pb-4">
         <div className="flex gap-2">
-          {/* Weekday Labels */}
+          {/* Labels */}
           <div className="grid grid-rows-7 grid-flow-row gap-2 pt-0.5">
             {weekDays.map((weekDay, i) => (
-              <div 
-                key={`${weekDay}-${i}`} 
-                className="text-zinc-500 text-xs h-8 flex items-center justify-center font-bold"
-              >
+              <div key={`${weekDay}-${i}`} className="text-zinc-500 text-xs h-8 flex items-center justify-center font-bold">
                 {weekDay}
               </div>
             ))}
           </div>
 
-          {/* The Grid */}
+          {/* Grid */}
           <div className="grid grid-rows-7 grid-flow-col gap-2">
             {summaryDates.map((date) => {
               const dayInSummary = summary.find((day) => dayjs(date).isSame(day.date, 'day'));
@@ -64,31 +61,22 @@ export function SummaryTable() {
         </div>
       </div>
 
-      {/* Right Column: The Side Panel (Mini Screen) */}
+      {/* Right: Side Panel */}
       <div className="w-full md:w-80 min-w-[320px] sticky top-8">
-        <DayDetailsPanel date={selectedDate} />
+        <DayDetailsPanel 
+            date={selectedDate} 
+            // Callback to refresh summary if needed
+            onUpdate={() => getSummary().then(setSummary)}
+        />
       </div>
 
     </div>
   );
 }
 
-function HabitDay({ 
-  date, 
-  defaultCompleted = 0, 
-  amount = 0, 
-  isSelected,
-  onClick 
-}: { 
-  date: Date, 
-  defaultCompleted?: number, 
-  amount?: number, 
-  isSelected?: boolean,
-  onClick: () => void
-}) {
+function HabitDay({ date, defaultCompleted = 0, amount = 0, isSelected, onClick }: any) {
   const completedPercentage = amount > 0 ? Math.round((defaultCompleted / amount) * 100) : 0;
   
-  // Green scale logic - Smaller squares (w-8 h-8)
   const bgClass = clsx("w-8 h-8 rounded-lg cursor-pointer transition-all border-2", {
     'bg-zinc-900 border-zinc-800': completedPercentage === 0,
     'bg-green-900 border-green-700': completedPercentage > 0 && completedPercentage < 20,
@@ -99,41 +87,41 @@ function HabitDay({
     'ring-2 ring-white ring-offset-2 ring-offset-background': isSelected
   });
 
-  return (
-    <div 
-      onClick={onClick}
-      className={bgClass}
-      // No Title/Tooltip to keep it extremely clean as requested
-    />
-  );
+  return <div onClick={onClick} className={bgClass} />;
 }
 
-function DayDetailsPanel({ date }: { date: Date }) {
+function DayDetailsPanel({ date, onUpdate }: { date: Date, onUpdate: () => void }) {
   const [habits, setHabits] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
+  const isFuture = dayjs(date).endOf('day').isAfter(dayjs());
+
   useEffect(() => {
      setLoading(true);
      getHabits().then(h => {
        setHabits(h);
        setLoading(false);
      }); 
-  }, [date]); // Refresh when date changes (or optimize to fetch once and filter)
+  }, [date]);
 
   async function handleToggle(habitId: string) {
+     if (isFuture) {
+         toast.error("Você não pode marcar hábitos no futuro! 🔮");
+         return;
+     }
+
      await toggleHabitLog(habitId, date);
-     
-     // Optimistic update
-     setHabits(prev => prev.map(h => {
-        if (h.id === habitId) {
-           const wasCompleted = h.logs.some((l:any) => dayjs(l.date).isSame(date, 'day') && l.completed);
-           const newLogs = wasCompleted 
-              ? h.logs.filter((l:any) => !dayjs(l.date).isSame(date, 'day'))
-              : [...h.logs, { date: date.toISOString(), completed: true }];
-           return { ...h, logs: newLogs };
-        }
-        return h;
-     }));
+     // Re-fetch to be safe and update progress bar correctly
+     getHabits().then(setHabits);
+     onUpdate(); // Update the grid
+  }
+
+  async function handleDelete(habitId: string) {
+      if(!confirm("Tem certeza que deseja excluir este hábito?")) return;
+      
+      await deleteHabit(habitId);
+      toast.success("Hábito excluído!");
+      getHabits().then(setHabits);
+      onUpdate();
   }
   
   const completedCount = habits.filter(h => h.logs.some((l:any) => dayjs(l.date).isSame(date, 'day') && l.completed)).length;
@@ -161,13 +149,26 @@ function DayDetailsPanel({ date }: { date: Date }) {
              const isCompleted = habit.logs.some((l:any) => dayjs(l.date).isSame(date, 'day') && l.completed);
              
              return (
-               <div key={habit.id} onClick={() => handleToggle(habit.id)} className="flex items-center gap-3 group focus:outline-none cursor-pointer p-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
-                 <div className={clsx("h-6 w-6 rounded flex items-center justify-center border-2 transition-colors", isCompleted ? "bg-green-500 border-green-500" : "bg-transparent border-zinc-700 group-hover:border-zinc-600")}>
-                    {isCompleted && <span className="text-white text-xs font-bold">✔</span>}
-                 </div>
-                 <span className={clsx("font-semibold text-lg leading-tight transition-colors", isCompleted ? "line-through text-zinc-500" : "text-zinc-100")}>
-                   {habit.title}
-                 </span>
+               <div key={habit.id} className="flex items-center justify-between group p-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
+                   <div 
+                     onClick={() => handleToggle(habit.id)}
+                     className={cn("flex items-center gap-3 cursor-pointer flex-1", isFuture && "opacity-50 cursor-not-allowed")}
+                   >
+                     <div className={clsx("h-6 w-6 rounded flex items-center justify-center border-2 transition-colors", isCompleted ? "bg-green-500 border-green-500" : "bg-transparent border-zinc-700 group-hover:border-zinc-600")}>
+                        {isCompleted && <span className="text-white text-xs font-bold">✔</span>}
+                     </div>
+                     <span className={clsx("font-semibold text-lg leading-tight transition-colors", isCompleted ? "line-through text-zinc-500" : "text-zinc-100")}>
+                       {habit.title}
+                     </span>
+                   </div>
+
+                   <button 
+                      onClick={() => handleDelete(habit.id)}
+                      className="text-zinc-500 hover:text-red-500 p-2 transition-colors"
+                      title="Excluir"
+                   >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                   </button>
                </div>
              )
           })
