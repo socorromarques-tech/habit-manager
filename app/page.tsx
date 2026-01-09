@@ -1,7 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { SummaryTable } from "@/components/SummaryTable";
-import HabitForm from "@/components/HabitForm";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -20,21 +19,11 @@ export default async function Home() {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-16 py-8">
-      
-      {/* Header / Form Section */}
-      <div className="flex flex-col gap-4">
-         <h2 className="text-3xl font-bold">Meu Painel</h2>
-         <div className="w-full max-w-xl">
-            <HabitForm />
-         </div>
-      </div>
-
-      {/* The Ignite Grid */}
-      <div className="w-full">
+    <div className="w-full flex items-center justify-center py-8">
+      {/* Centered Ignite Layout */}
+      <div className="w-full max-w-[1248px] px-8">
         <SummaryTable />
       </div>
-
     </div>
   );
 }

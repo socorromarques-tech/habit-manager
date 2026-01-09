@@ -7,7 +7,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// NextAuth Models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  habits        Habit[]
+}
 
 model Account {
   id                 String  @id @default(cuid())
@@ -36,17 +45,6 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  habits        Habit[]
-}
-
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -55,27 +53,24 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Habit Tracker Models
-
 model Habit {
-  id          String      @id @default(cuid())
-  userId      String
-  title       String
-  description String?
-  goal        Int         @default(1) // Goal per day (e.g. 1 time, 5 cups of water)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  logs        HabitLog[]
+  id        String     @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime   @default(now())
+  goal      Int        @default(1)
+  weekDays  Int[]      // 0=Sun, 1=Mon, ..., 6=Sat
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs      HabitLog[]
 }
 
 model HabitLog {
   id        String   @id @default(cuid())
   habitId   String
-  date      DateTime // Midnight UTC
-  count     Int      @default(1) // Current progress for the day (e.g. 3 cups)
-  completed Boolean  @default(true) // Kept for backward compat, means count >= habit.goal
-  createdAt DateTime @default(now())
+  date      DateTime
+  count     Int      @default(0)
+  completed Boolean  @default(false)
 
   habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
