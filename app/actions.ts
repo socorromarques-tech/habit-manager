@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
+import dayjs from 'dayjs'; // Ensure imported if using strict processing inside action
 
 const CreateHabitSchema = z.object({
   title: z.string().min(3, "O nome do hábito precisa ter pelo menos 3 letras"),
@@ -49,9 +50,6 @@ export async function createHabit(title: string, goal: number = 1, weekDays: num
   revalidatePath('/');
 }
 
-// Get Habits (Filtered for a specific date if provided, otherwise all)
-// Note: In client, we usually fetch all then filter, or we can fetch only relevant.
-// For Ignite grid, getting all is easier for optimistic updates, then filtering in JS.
 export async function getHabits() {
   const userId = await getUserId();
   if (!userId) return [];
@@ -85,7 +83,6 @@ export async function deleteHabit(habitId: string) {
   revalidatePath('/');
 }
 
-// Renamed for clarity, kept alias below
 export async function updateHabitProgress(habitId: string, date: Date) {
   const userId = await getUserId();
   if (!userId) throw new Error('Not authenticated');
@@ -106,14 +103,11 @@ export async function updateHabitProgress(habitId: string, date: Date) {
     },
   });
 
-  // Toggle Logic (Simple Checklist)
   if (existingLog) {
-     // If exists, delete it (Uncheck)
      await prisma.habitLog.delete({
         where: { id: existingLog.id },
      });
   } else {
-     // Create (Check)
      await prisma.habitLog.create({
         data: {
             habitId,
@@ -167,36 +161,13 @@ export async function getSummary(): Promise<DaySummary[]> {
     summaryMap.set(dateKey, current);
   });
 
-  // Calculate totals per day (considering recurrence)
-  // This is expensive to do for EVERY day in JS for a year. 
-  // Simplified: Return completed map, and let Client calculate totals based on Habits + Date?
-  // Or do it here for the *rendered* days?
-  // Let's do a quick approximation for populated days + today
-  
-  // Actually, client needs "Map of Date -> Info". 
-  // If we return just the array of days with activity, empty days are... empty.
-  // But to color the grid correctly (Gray vs Green), we need to know if there WAS a goal.
-  // If total=0, it's disabled/hidden? No, usually empty gray.
-  
-  // Let's return the logged days. The client can compute "Total" for a specific square if needed,
-  // or we compute it here for the *logged* days.
-  // For the heatmap, "Gray" means 0 completed. But we need denominator to know shade.
-  // If we don't know denominator for empty days, we assume 0?
-  
-  // Better approach for V2:
-  // Iterate strictly over the days we want to show? No, too many.
-  // Let's stick to: Return Logs.
-  // BUT we need `total` for the `completed/total` ratio.
-  
-  // Compute total for each day present in logs:
   for (const [dateStr, data] of summaryMap) {
       const dateDate = new Date(dateStr);
-      const dayOfWeek = dateDate.getUTCDay(); // 0-6
+      const dayOfWeek = dateDate.getUTCDay(); 
       
-      // Filter habits active on this day
       const possibleHabits = habits.filter(h => 
           h.weekDays.includes(dayOfWeek) && 
-          h.createdAt <= dateDate // Created before or on this day
+          dayjs(h.createdAt).startOf('day').isBefore(dayjs(dateDate).endOf('day')) // Fixed logic: createdAt <= endOfTargetDay
       );
       
       data.total = possibleHabits.length;
