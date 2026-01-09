@@ -9,10 +9,11 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import 'dayjs/locale/pt-br';
 import HabitForm from './HabitForm';
+import { Trash2 } from 'lucide-react'; 
+import { useRouter } from 'next/navigation';
 
 dayjs.locale('pt-br');
 
-// Generate days to fill the grid (from start of year)
 const generateSummaryDates = () => {
   const startOfYear = dayjs().startOf('year');
   const startWeekday = startOfYear.day(); 
@@ -35,9 +36,15 @@ const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
 export function SummaryTable() {
   const [summary, setSummary] = useState<any[]>([]);
+  const router = useRouter();
   
+  const refreshSummary = () => {
+    getSummary().then(setSummary);
+    router.refresh(); // Helper to force server re-render if needed
+  };
+
   useEffect(() => {
-     getSummary().then(setSummary);
+     refreshSummary();
   }, []);
 
   return (
@@ -73,7 +80,7 @@ export function SummaryTable() {
                   defaultCompleted={dayInSummary?.completed}
                   amount={dayInSummary?.total}
                   isFuture={isFuture}
-                  onUpdate={() => getSummary().then(setSummary)}
+                  onUpdate={refreshSummary}
                 />
               );
             })}
@@ -144,23 +151,34 @@ function HabitsList({ date, onUpdate }: { date: Date, onUpdate: () => void }) {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-     getHabits().then(allHabits => {
-       // Filter: Only show habits scheduled for this Week Day
-       const dayOfWeek = dayjs(date).day();
-       const relevantHabits = allHabits.filter((h: any) => h.weekDays.includes(dayOfWeek));
-       setHabits(relevantHabits);
-       setLoading(false);
-     }); 
+     loadHabits();
   }, [date]);
+
+  function loadHabits() {
+    getHabits().then(allHabits => {
+        const dayOfWeek = dayjs(date).day();
+        const relevantHabits = allHabits.filter((h: any) => h.weekDays.includes(dayOfWeek));
+        setHabits(relevantHabits);
+        setLoading(false);
+      }); 
+  }
 
   async function handleToggle(habitId: string) {
      await toggleHabitLog(habitId, date);
-     // Re-fetch logic
-     getHabits().then(all => {
-       const dayOfWeek = dayjs(date).day();
-       setHabits(all.filter((h: any) => h.weekDays.includes(dayOfWeek)));
-     });
-     onUpdate();
+     loadHabits(); // Reload local state
+     onUpdate(); // Trigger Grid update
+  }
+
+  async function handleDelete(habitId: string) {
+    if(!confirm("Tem certeza que deseja excluir este hábito?")) return;
+    try {
+        await deleteHabit(habitId);
+        toast.success("Hábito excluído!");
+        loadHabits();
+        onUpdate();
+    } catch (e) {
+        toast.error("Erro ao excluir hábito");
+    }
   }
 
   return (
@@ -174,13 +192,23 @@ function HabitsList({ date, onUpdate }: { date: Date, onUpdate: () => void }) {
              const isCompleted = habit.logs.some((l:any) => dayjs(l.date).isSame(date, 'day') && l.completed);
              
              return (
-               <div key={habit.id} onClick={() => handleToggle(habit.id)} className="flex items-center gap-3 group focus:outline-none cursor-pointer">
-                 <div className={clsx("h-8 w-8 rounded-lg flex items-center justify-center border-2 group-data-[state=checked]:bg-green-500 group-data-[state=checked]:border-green-500 transition-colors", isCompleted ? "bg-green-500 border-green-500" : "bg-zinc-900 border-zinc-800 group-hover:border-zinc-700")}>
-                    {isCompleted && <span className="text-white font-bold">✔</span>}
+               <div key={habit.id} className="flex items-center justify-between group p-2 rounded-lg hover:bg-zinc-800/50 transition-colors">
+                 <div onClick={() => handleToggle(habit.id)} className="flex items-center gap-3 cursor-pointer flex-1 focus:outline-none">
+                    <div className={clsx("h-8 w-8 rounded-lg flex items-center justify-center border-2 transition-colors", isCompleted ? "bg-green-500 border-green-500" : "bg-zinc-900 border-zinc-800 group-hover:border-zinc-700")}>
+                        {isCompleted && <span className="text-white font-bold">✔</span>}
+                    </div>
+                    <span className={clsx("font-semibold text-xl leading-tight transition-colors", isCompleted ? "line-through text-zinc-400" : "text-white")}>
+                    {habit.title}
+                    </span>
                  </div>
-                 <span className={clsx("font-semibold text-xl leading-tight transition-colors", isCompleted ? "line-through text-zinc-400" : "text-white")}>
-                   {habit.title}
-                 </span>
+
+                 <button 
+                      onClick={() => handleDelete(habit.id)}
+                      className="text-zinc-500 hover:text-red-500 p-2 transition-colors focus:outline-none"
+                      title="Excluir Hábito"
+                   >
+                     <Trash2 size={18} />
+                 </button>
                </div>
              )
           })
