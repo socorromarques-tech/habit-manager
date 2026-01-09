@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { createHabit } from '@/app/actions';
+import { toast } from 'sonner';
 
 export default function HabitForm() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -13,8 +14,17 @@ export default function HabitForm() {
     if (typeof title !== 'string' || !title) return;
     const goal = goalStr ? parseInt(goalStr.toString(), 10) : 1;
 
-    await createHabit(title, goal);
-    formRef.current?.reset();
+    try {
+      await createHabit(title, goal);
+      toast.success("Hábito criado com sucesso!");
+      formRef.current?.reset();
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Erro ao criar hábito.");
+      }
+    }
   }
 
   return (

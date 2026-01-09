@@ -4,6 +4,13 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/auth';
+import { z } from 'zod';
+
+// Define Validation Schema
+const CreateHabitSchema = z.object({
+  title: z.string().min(3, "O nome do hábito precisa ter pelo menos 3 letras"),
+  goal: z.number().min(1, "A meta deve ser pelo menos 1 vez ao dia").max(100, "Meta muito alta!"),
+});
 
 // Helper to get current user ID
 async function getUserId() {
@@ -23,7 +30,14 @@ async function getUserId() {
 
 export async function createHabit(title: string, goal: number = 1) {
   const userId = await getUserId();
-  if (!userId) throw new Error('Not authenticated');
+  if (!userId) throw new Error('Você precisa estar logado.');
+
+  // Validate Input
+  const result = CreateHabitSchema.safeParse({ title, goal });
+  if (!result.success) {
+    const errorMessage = result.error.issues.map(i => i.message).join(', ');
+    throw new Error(errorMessage);
+  }
 
   await prisma.habit.create({
     data: {
@@ -46,7 +60,7 @@ export async function getHabits() {
       logs: {
         where: {
           date: {
-            gte: new Date(new Date().setDate(new Date().getDate() - 365)), // Last 365 days
+            gte: new Date(new Date().setDate(new Date().getDate() - 365)), 
           },
         },
       },
@@ -91,9 +105,7 @@ export async function updateHabitProgress(habitId: string, date: Date) {
 
   let newCount = 1;
   if (existingLog) {
-    // Cycle: 0 -> 1 -> ... -> Goal -> 0
     if (existingLog.count >= habit.goal) {
-      // Was completed, reset to 0 (delete log)
       await prisma.habitLog.delete({
         where: { id: existingLog.id },
       });
@@ -111,7 +123,6 @@ export async function updateHabitProgress(habitId: string, date: Date) {
       },
     });
   } else {
-    // Create new log with count 1
     await prisma.habitLog.create({
       data: {
         habitId,
