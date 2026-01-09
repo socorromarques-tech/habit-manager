@@ -10,11 +10,30 @@ import 'dayjs/locale/pt-br';
 
 dayjs.locale('pt-br');
 
-// Generate days to fill the grid (from start of year)
-const summaryDates = Array.from({ length: 18 * 7 }).map((_, i) => {
-  return dayjs().startOf('year').add(i, 'days');
-});
+// Logic to generate dates correctly aligned with weekdays
+const generateSummaryDates = () => {
+  const startOfYear = dayjs().startOf('year');
+  const startWeekday = startOfYear.day(); // 0 (Sun) to 6 (Sat)
+  
+  const dates = [];
+  
+  // 1. Add Placeholders for days before Jan 1st to align Row 0 with Sunday
+  for (let i = 0; i < startWeekday; i++) {
+    dates.push(null);
+  }
 
+  // 2. Add Actual Dates
+  // We want roughly 6 months (18 weeks is ~4 months, let's do more? User said "Year" implied inside Ignite? 
+  // Ignite usually shows full year. Let's do a decent chunk, e.g. 26 weeks (half year) 
+  // or just enough to fill the screen. 18 * 7 is fine for now, just fixed alignment.
+  for (let i = 0; i < 18 * 7; i++) {
+    dates.push(startOfYear.add(i, 'days'));
+  }
+
+  return dates;
+};
+
+const summaryDates = generateSummaryDates();
 const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
 export function SummaryTable() {
@@ -23,7 +42,7 @@ export function SummaryTable() {
   
   useEffect(() => {
      getSummary().then(setSummary);
-  }, [selectedDate]); // Refresh summary when interactions might have changed it
+  }, [selectedDate]);
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-8 items-start">
@@ -40,20 +59,28 @@ export function SummaryTable() {
             ))}
           </div>
 
-          {/* Grid */}
+          {/* Gri - Dates */}
           <div className="grid grid-rows-7 grid-flow-col gap-2">
-            {summaryDates.map((date) => {
+            {summaryDates.map((dateObj, i) => {
+              if (!dateObj) {
+                  return <div key={`empty-${i}`} className="w-8 h-8" />; // Placeholder
+              }
+
+              // Normal HabitDay Rendering
+              const date = dateObj.toDate();
               const dayInSummary = summary.find((day) => dayjs(date).isSame(day.date, 'day'));
               const isSelected = dayjs(date).isSame(selectedDate, 'day');
+              const isFuture = dayjs(date).endOf('day').isAfter(dayjs());
               
               return (
                 <HabitDay 
                   key={date.toString()}
-                  date={date.toDate()}
+                  date={date}
                   defaultCompleted={dayInSummary?.completed}
                   amount={dayInSummary?.total}
                   isSelected={isSelected}
-                  onClick={() => setSelectedDate(date.toDate())}
+                  onClick={() => !isFuture && setSelectedDate(date)} // Prevent selecting future in grid? Or just disable toggle? Let's allow select to see "Locked" state.
+                  isFuture={isFuture}
                 />
               );
             })}
@@ -65,7 +92,6 @@ export function SummaryTable() {
       <div className="w-full md:w-80 min-w-[320px] sticky top-8">
         <DayDetailsPanel 
             date={selectedDate} 
-            // Callback to refresh summary if needed
             onUpdate={() => getSummary().then(setSummary)}
         />
       </div>
@@ -74,7 +100,7 @@ export function SummaryTable() {
   );
 }
 
-function HabitDay({ date, defaultCompleted = 0, amount = 0, isSelected, onClick }: any) {
+function HabitDay({ date, defaultCompleted = 0, amount = 0, isSelected, onClick, isFuture }: any) {
   const completedPercentage = amount > 0 ? Math.round((defaultCompleted / amount) * 100) : 0;
   
   const bgClass = clsx("w-8 h-8 rounded-lg cursor-pointer transition-all border-2", {
@@ -84,10 +110,17 @@ function HabitDay({ date, defaultCompleted = 0, amount = 0, isSelected, onClick 
     'bg-green-700 border-green-500': completedPercentage >= 40 && completedPercentage < 60,
     'bg-green-600 border-green-500': completedPercentage >= 60 && completedPercentage < 80,
     'bg-green-500 border-green-400': completedPercentage >= 80,
-    'ring-2 ring-white ring-offset-2 ring-offset-background': isSelected
+    'ring-2 ring-white ring-offset-2 ring-offset-background': isSelected,
+    'opacity-50 cursor-not-allowed': isFuture // Optional: Visually dim future days
   });
 
-  return <div onClick={onClick} className={bgClass} />;
+  return (
+    <div 
+      onClick={isFuture ? undefined : onClick} // Disable click on future in grid
+      className={bgClass}
+      title={dayjs(date).format('DD/MM/YYYY')} // re-added title for debugging date, helpful for user verification
+    />
+  );
 }
 
 function DayDetailsPanel({ date, onUpdate }: { date: Date, onUpdate: () => void }) {
@@ -110,14 +143,12 @@ function DayDetailsPanel({ date, onUpdate }: { date: Date, onUpdate: () => void 
      }
 
      await toggleHabitLog(habitId, date);
-     // Re-fetch to be safe and update progress bar correctly
      getHabits().then(setHabits);
-     onUpdate(); // Update the grid
+     onUpdate();
   }
 
   async function handleDelete(habitId: string) {
       if(!confirm("Tem certeza que deseja excluir este hábito?")) return;
-      
       await deleteHabit(habitId);
       toast.success("Hábito excluído!");
       getHabits().then(setHabits);
