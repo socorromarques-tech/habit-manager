@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
-import dayjs from 'dayjs'; // Ensure imported if using strict processing inside action
+import dayjs from 'dayjs'; 
 
 const CreateHabitSchema = z.object({
   title: z.string().min(3, "O nome do hábito precisa ter pelo menos 3 letras"),
@@ -121,7 +121,6 @@ export async function updateHabitProgress(habitId: string, date: Date) {
   revalidatePath('/');
 }
 
-// Alias
 export async function toggleHabitLog(habitId: string, date: Date) {
   return updateHabitProgress(habitId, date);
 }
@@ -145,6 +144,9 @@ export async function getSummary(): Promise<DaySummary[]> {
       date: { gte: startDate },
       completed: true, 
     },
+    include: { // Include Habit to check weekDays
+        habit: true
+    }
   });
 
   const habits = await prisma.habit.findMany({
@@ -156,9 +158,15 @@ export async function getSummary(): Promise<DaySummary[]> {
 
   logs.forEach(log => {
     const dateKey = log.date.toISOString().split('T')[0];
-    const current = summaryMap.get(dateKey) || { completed: 0, total: 0 };
-    current.completed += 1;
-    summaryMap.set(dateKey, current);
+    const dateDate = new Date(dateKey);
+    const dayOfWeek = dateDate.getUTCDay();
+
+    // FILTER: Only count log if habit allows this weekday
+    if (log.habit.weekDays.includes(dayOfWeek)) {
+        const current = summaryMap.get(dateKey) || { completed: 0, total: 0 };
+        current.completed += 1;
+        summaryMap.set(dateKey, current);
+    }
   });
 
   for (const [dateStr, data] of summaryMap) {
@@ -167,7 +175,7 @@ export async function getSummary(): Promise<DaySummary[]> {
       
       const possibleHabits = habits.filter(h => 
           h.weekDays.includes(dayOfWeek) && 
-          dayjs(h.createdAt).startOf('day').isBefore(dayjs(dateDate).endOf('day')) // Fixed logic: createdAt <= endOfTargetDay
+          dayjs(h.createdAt).startOf('day').isBefore(dayjs(dateDate).endOf('day'))
       );
       
       data.total = possibleHabits.length;
