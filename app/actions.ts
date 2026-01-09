@@ -7,16 +7,9 @@ import { authOptions } from '@/lib/auth';
 
 // Helper to get current user ID
 async function getUserId() {
-  const session = await getServerSession(authOptions); // Pass options here too!
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) return null;
 
-  // Since we added user.id to session callback, we could just return session.user.id
-  // But strictly speaking we should query DB or trust session.
-  // For safety/consistency with previous logic, lets lookup by email if needed, 
-  // OR rely on session.user.id if I fixed the types.
-  // For now, I'll stick to email lookup OR just use the session.user.id if available 
-  // to save a query, but the callback I added to lib/auth.ts puts id on session.
-  
   if ((session.user as any).id) {
       return (session.user as any).id as string;
   }
@@ -28,13 +21,14 @@ async function getUserId() {
   return user?.id;
 }
 
-export async function createHabit(title: string) {
+export async function createHabit(title: string, goal: number = 1) {
   const userId = await getUserId();
   if (!userId) throw new Error('Not authenticated');
 
   await prisma.habit.create({
     data: {
       title,
+      goal,
       userId,
     },
   });
@@ -68,24 +62,22 @@ export async function deleteHabit(habitId: string) {
   await prisma.habit.delete({
     where: {
       id: habitId,
-      userId, // Ensure ownership
+      userId,
     },
   });
 
   revalidatePath('/');
 }
 
-export async function toggleHabitLog(habitId: string, date: Date) {
+export async function updateHabitProgress(habitId: string, date: Date) {
   const userId = await getUserId();
   if (!userId) throw new Error('Not authenticated');
 
-  // Verify ownership
   const habit = await prisma.habit.findUnique({
     where: { id: habitId, userId },
   });
   if (!habit) throw new Error('Habit not found');
 
-  // Normalize date to midnight UTC
   const normalizedDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
 
   const existingLog = await prisma.habitLog.findUnique({
@@ -97,26 +89,35 @@ export async function toggleHabitLog(habitId: string, date: Date) {
     },
   });
 
+  let newCount = 1;
   if (existingLog) {
-    if (existingLog.completed) {
-      // Toggle off (delete log)
+    // Cycle: 0 -> 1 -> ... -> Goal -> 0
+    if (existingLog.count >= habit.goal) {
+      // Was completed, reset to 0 (delete log)
       await prisma.habitLog.delete({
         where: { id: existingLog.id },
       });
+      revalidatePath('/');
+      return;
     } else {
-      // Should not usually happen given our schema, but set to completed true
-      await prisma.habitLog.update({
-        where: { id: existingLog.id },
-        data: { completed: true },
-      });
+      newCount = existingLog.count + 1;
     }
+    
+    await prisma.habitLog.update({
+      where: { id: existingLog.id },
+      data: { 
+        count: newCount,
+        completed: newCount >= habit.goal
+      },
+    });
   } else {
-    // Create new log
+    // Create new log with count 1
     await prisma.habitLog.create({
       data: {
         habitId,
         date: normalizedDate,
-        completed: true,
+        count: 1,
+        completed: 1 >= habit.goal,
       },
     });
   }

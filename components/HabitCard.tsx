@@ -1,6 +1,6 @@
 'use client';
 
-import { deleteHabit, toggleHabitLog } from '@/app/actions';
+import { deleteHabit, updateHabitProgress } from '@/app/actions';
 import { Habit, HabitLog } from '@prisma/client';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ export default function HabitCard({ habit }: { habit: HabitWithLogs }) {
         <div>
           <h3 className="font-semibold">{habit.title}</h3>
           <p className="text-sm text-muted-foreground">
-            {habit.logs.length} dias concluídos no último ano
+             Meta: {habit.goal}x ao dia
           </p>
         </div>
         <button
@@ -61,18 +61,27 @@ export default function HabitCard({ habit }: { habit: HabitWithLogs }) {
             );
           });
           
+          const count = log?.count || 0;
           const isCompleted = !!log?.completed;
+
+          // Color logic
+          let colorClass = "bg-muted hover:bg-muted-foreground/30";
+          if (isCompleted) {
+            colorClass = "bg-green-500 hover:bg-green-600";
+          } else if (count > 0) {
+            // Partial progress - Yellow/Orange
+            // Calculate opacity or simplified step
+            colorClass = "bg-yellow-400 hover:bg-yellow-500";
+          }
 
           return (
             <button
               key={date.toISOString()}
-              onClick={() => toggleHabitLog(habit.id, date)}
-              title={date.toLocaleDateString()}
+              onClick={() => updateHabitProgress(habit.id, date)}
+              title={`${date.toLocaleDateString()}: ${count}/${habit.goal}`}
               className={cn(
                 "h-3 w-3 rounded-sm transition-colors",
-                isCompleted
-                  ? "bg-green-500 hover:bg-green-600"
-                  : "bg-muted hover:bg-muted-foreground/30"
+                colorClass
               )}
             />
           );
