@@ -99,7 +99,7 @@ export default function HabitForm() {
         type="submit"
         className="mt-6 rounded-lg bg-green-600 p-4 flex items-center justify-center gap-3 font-semibold hover:bg-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-zinc-900"
       >
-        <Check size={20} weight="bold" />
+        <Check size={20}  />
         Confirmar
       </button>
     </form>
