@@ -44,7 +44,7 @@ export function MonthlyCalendar({ logs }: MonthlyCalendarProps) {
     }
 
     return (
-        <div className="flex flex-col gap-4 bg-zinc-900 border border-zinc-800 p-6 rounded-xl">
+        <div className="flex flex-col gap-4 bg-zinc-900 border border-zinc-800 p-6 rounded-xl w-full">
              <div className="flex items-center justify-between">
                  <h3 className="font-bold text-lg capitalize text-zinc-100">
                      {currentDate.format('MMMM YYYY')}
@@ -60,9 +60,9 @@ export function MonthlyCalendar({ logs }: MonthlyCalendarProps) {
                  </div>
              </div>
 
-             <div className="grid grid-cols-7 gap-2">
-                 {weekDays.map(day => (
-                     <div key={day} className="text-zinc-500 text-xs font-bold text-center py-2 uppercase">
+             <div className="grid grid-cols-7 gap-3 sm:gap-4 lg:gap-6">
+                 {weekDays.map((day, i) => (
+                     <div key={`${day}-${i}`} className="text-zinc-500 text-xs sm:text-sm font-bold text-center py-2 uppercase">
                          {day}
                      </div>
                  ))}
@@ -79,7 +79,7 @@ export function MonthlyCalendar({ logs }: MonthlyCalendarProps) {
                      return (
                          <div 
                             key={date.toString()} 
-                            className={clsx("aspect-square rounded-lg flex items-center justify-center text-sm font-medium border relative group",
+                            className={clsx("aspect-square rounded-lg flex items-center justify-center text-sm sm:text-base font-medium border relative group transition-all",
                                 completed ? "bg-green-600 border-green-500 text-white" : "bg-black/20 border-white/5 text-zinc-400",
                                 isToday && !completed && "border-zinc-500 text-zinc-100",
                                 isFuture && "opacity-30"
@@ -87,7 +87,7 @@ export function MonthlyCalendar({ logs }: MonthlyCalendarProps) {
                          >
                              {date.date()}
                              {completed && <div className="absolute inset-0 flex items-center justify-center bg-green-500/10 rounded-lg animate-in fade-in zoom-in duration-300">
-                                 <Check size={14} className="text-green-200" strokeWidth={3} />
+                                 <Check size={18} className="text-green-200" strokeWidth={3} />
                              </div>}
                          </div>
                      )

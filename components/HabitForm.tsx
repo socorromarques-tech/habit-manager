@@ -5,6 +5,8 @@ import { createHabit, updateHabit } from '@/app/actions';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
 import * as Checkbox from '@radix-ui/react-checkbox';
+import { CATEGORIES } from '@/lib/categories';
+import { clsx } from 'clsx';
 
 const weekDays = [
   'Domingo',
@@ -22,6 +24,7 @@ interface HabitFormProps {
         title: string;
         description?: string | null;
         weekDays: number[];
+        category?: string | null;
         goal?: number;
     } | null;
     onSuccess?: () => void;
@@ -32,17 +35,19 @@ export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
   const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<string | undefined>(undefined);
 
-  // Pre-fill form if editing
   useEffect(() => {
       if (initialData) {
           setTitle(initialData.title);
           setDescription(initialData.description || '');
           setSelectedWeekDays(initialData.weekDays);
+          setCategory(initialData.category || undefined);
       } else {
           setTitle('');
           setDescription('');
           setSelectedWeekDays([]);
+          setCategory(undefined);
       }
   }, [initialData]);
 
@@ -55,7 +60,6 @@ export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
     if (typeof titleEntry !== 'string' || !titleEntry) return;
     const desc = typeof descEntry === 'string' ? descEntry : undefined;
     
-    // Client-side quick check (optional, but good UX)
     if (selectedWeekDays.length === 0) {
         toast.error("Selecione pelo menos um dia da semana!");
         return;
@@ -63,12 +67,10 @@ export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
 
     try {
       if (initialData) {
-         // Update Mode
-         await updateHabit(initialData.id, titleEntry, goal, selectedWeekDays, desc);
+         await updateHabit(initialData.id, titleEntry, goal, selectedWeekDays, desc, category);
          toast.success("Hábito atualizado com sucesso!");
       } else {
-         // Create Mode
-         await createHabit(titleEntry, goal, selectedWeekDays, desc);
+         await createHabit(titleEntry, goal, selectedWeekDays, desc, category);
          toast.success("Hábito criado com sucesso!");
       }
 
@@ -76,6 +78,7 @@ export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
       setTitle('');
       setDescription('');
       setSelectedWeekDays([]);
+      setCategory(undefined);
       
       if (onSuccess) {
           onSuccess();
@@ -99,7 +102,7 @@ export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
   }
 
   return (
-    <form ref={formRef} action={action} className="flex flex-col gap-6 p-6 bg-zinc-900 rounded-2xl border border-zinc-800">
+    <form ref={formRef} action={action} className="flex flex-col gap-6 p-6 bg-zinc-900 rounded-2xl border border-zinc-800 max-h-[80vh] overflow-y-auto">
       <div className="flex flex-col gap-2">
           <label htmlFor="title" className="font-semibold leading-tight text-zinc-100">
             {initialData ? 'Editar hábito' : 'Qual seu novo hábito?'}
@@ -116,6 +119,34 @@ export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
             onChange={(e) => setTitle(e.target.value)}
           />
       </div>
+
+       <div className="flex flex-col gap-2">
+          <label className="font-semibold leading-tight text-zinc-100">
+            Categoria
+          </label>
+          <div className="grid grid-cols-2 gap-4"> 
+              {CATEGORIES.map((cat) => {
+                  const Icon = cat.icon;
+                  return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setCategory(cat.id)}
+                        className={clsx("p-4 rounded-xl border-2 flex items-center justify-center gap-3 transition-all", 
+                            category === cat.id 
+                            ? `bg-white/10 border-white text-white`
+                            : "bg-zinc-800 border-transparent text-zinc-400 hover:border-zinc-700"
+                        )}
+                        style={{ borderColor: category === cat.id ? cat.color : undefined }}
+                      >
+                          <Icon size={24} color={category === cat.id ? cat.color : 'currentColor'} />
+                          <span className="text-sm font-bold truncate">{cat.name}</span>
+                      </button>
+                  )
+              })}
+          </div>
+      </div>
+
 
       <div className="flex flex-col gap-2">
           <label htmlFor="description" className="font-semibold leading-tight text-zinc-100">

@@ -22,11 +22,11 @@ async function getUserId() {
   return user?.id;
 }
 
-export async function createHabit(title: string, goal: number = 1, weekDays: number[] = [0,1,2,3,4,5,6], description?: string) {
+export async function createHabit(title: string, goal: number = 1, weekDays: number[] = [0,1,2,3,4,5,6], description?: string, category?: string) {
   const userId = await getUserId();
   if (!userId) throw new Error('Você precisa estar logado.');
 
-  const result = CreateHabitSchema.safeParse({ title, goal, weekDays, description });
+  const result = CreateHabitSchema.safeParse({ title, goal, weekDays, description, category });
   if (!result.success) {
     const errorMessage = result.error.issues.map(i => i.message).join(', ');
     throw new Error(errorMessage);
@@ -36,6 +36,7 @@ export async function createHabit(title: string, goal: number = 1, weekDays: num
     data: {
       title,
       description,
+      category,
       goal,
       userId,
       weekDays: weekDays,
@@ -45,11 +46,11 @@ export async function createHabit(title: string, goal: number = 1, weekDays: num
   revalidatePath('/');
 }
 
-export async function updateHabit(id: string, title: string, goal: number = 1, weekDays: number[], description?: string) {
+export async function updateHabit(id: string, title: string, goal: number = 1, weekDays: number[], description?: string, category?: string) {
     const userId = await getUserId();
     if (!userId) throw new Error('Você precisa estar logado.');
 
-    const result = CreateHabitSchema.safeParse({ title, goal, weekDays, description });
+    const result = CreateHabitSchema.safeParse({ title, goal, weekDays, description, category });
     if (!result.success) {
       const errorMessage = result.error.issues.map(i => i.message).join(', ');
       throw new Error(errorMessage);
@@ -68,6 +69,7 @@ export async function updateHabit(id: string, title: string, goal: number = 1, w
       data: {
         title,
         description,
+        category,
         goal,
         weekDays,
       },

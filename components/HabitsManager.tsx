@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { clsx } from 'clsx';
 import HabitForm from './HabitForm';
 import Link from 'next/link';
+import { getCategory } from '@/lib/categories';
 
 const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
@@ -82,12 +83,29 @@ export default function HabitsManager({ onUpdate }: { onUpdate: () => void }) {
             ) : habits.length === 0 ? (
                 <div className="text-zinc-500 text-sm text-center py-8">Nenhum hábito cadastrado.</div>
             ) : (
-                habits.map(habit => (
-                    <div key={habit.id} className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col gap-2 group hover:border-zinc-700 transition-colors">
-                        <div className="flex justify-between items-start">
-                            <Link href={`/habits/${habit.id}`} className="font-bold text-lg leading-tight hover:underline hover:text-green-400 transition-colors">
-                                {habit.title}
-                            </Link>
+                habits.map(habit => {
+                    const category = getCategory(habit.category);
+                    const borderColor = category ? category.color : 'zinc-800'; // Fallback logic would be better with CSS var or specific handling
+                    
+                    return (
+                    <div 
+                        key={habit.id} 
+                        className="bg-zinc-900 border p-4 rounded-xl flex flex-col gap-2 group transition-colors relative overflow-hidden"
+                        style={{ borderColor: category ? category.color : undefined }}
+                    >
+                        {/* Thin colored line on left instead of full border if preferred, but border is nice */}
+                        
+                        <div className="flex justify-between items-start z-10">
+                            <div className="flex flex-col gap-1">
+                                {category && (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1" style={{ color: category.color}}>
+                                        <category.icon size={12} /> {category.name}
+                                    </span>
+                                )}
+                                <Link href={`/habits/${habit.id}`} className="font-bold text-lg leading-tight hover:underline hover:text-green-400 transition-colors">
+                                    {habit.title}
+                                </Link>
+                            </div>
                             
                             <div className="flex items-center gap-1">
                                 <button 
@@ -108,13 +126,13 @@ export default function HabitsManager({ onUpdate }: { onUpdate: () => void }) {
                         </div>
 
                         {habit.description && (
-                            <div className="flex gap-2 items-start mt-1 mb-2 text-zinc-400 text-sm italic">
+                            <div className="flex gap-2 items-start mt-1 mb-2 text-zinc-400 text-sm italic z-10">
                                 <Quote size={12} className="min-w-[12px] mt-1 opacity-50" />
                                 <span className="line-clamp-2">{habit.description}</span>
                             </div>
                         )}
 
-                        <div className="flex gap-1 mt-auto">
+                        <div className="flex gap-1 mt-auto z-10">
                             {weekDays.map((day, i) => (
                                 <div 
                                     key={i}
@@ -129,7 +147,7 @@ export default function HabitsManager({ onUpdate }: { onUpdate: () => void }) {
                             ))}
                         </div>
                     </div>
-                ))
+                )})
             )}
         </div>
     </div>
