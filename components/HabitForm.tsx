@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { createHabit } from '@/app/actions';
+import { useRef, useState, useEffect } from 'react';
+import { createHabit, updateHabit } from '@/app/actions';
 import { toast } from 'sonner';
 import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import * as Checkbox from '@radix-ui/react-checkbox';
 
 const weekDays = [
@@ -17,30 +16,76 @@ const weekDays = [
   'Sábado',
 ];
 
-export default function HabitForm() {
+interface HabitFormProps {
+    initialData?: {
+        id: string;
+        title: string;
+        description?: string | null;
+        weekDays: number[];
+        goal?: number;
+    } | null;
+    onSuccess?: () => void;
+}
+
+export default function HabitForm({ initialData, onSuccess }: HabitFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Pre-fill form if editing
+  useEffect(() => {
+      if (initialData) {
+          setTitle(initialData.title);
+          setDescription(initialData.description || '');
+          setSelectedWeekDays(initialData.weekDays);
+      } else {
+          setTitle('');
+          setDescription('');
+          setSelectedWeekDays([]);
+      }
+  }, [initialData]);
+
 
   async function action(formData: FormData) {
-    const title = formData.get('title');
+    const titleEntry = formData.get('title');
+    const descEntry = formData.get('description');
     const goal = 1; 
 
-    if (typeof title !== 'string' || !title) return;
+    if (typeof titleEntry !== 'string' || !titleEntry) return;
+    const desc = typeof descEntry === 'string' ? descEntry : undefined;
+    
+    // Client-side quick check (optional, but good UX)
     if (selectedWeekDays.length === 0) {
         toast.error("Selecione pelo menos um dia da semana!");
         return;
     }
 
     try {
-      await createHabit(title, goal, selectedWeekDays);
-      toast.success("Hábito criado com sucesso!");
+      if (initialData) {
+         // Update Mode
+         await updateHabit(initialData.id, titleEntry, goal, selectedWeekDays, desc);
+         toast.success("Hábito atualizado com sucesso!");
+      } else {
+         // Create Mode
+         await createHabit(titleEntry, goal, selectedWeekDays, desc);
+         toast.success("Hábito criado com sucesso!");
+      }
+
       formRef.current?.reset();
+      setTitle('');
+      setDescription('');
       setSelectedWeekDays([]);
+      
+      if (onSuccess) {
+          onSuccess();
+      }
+
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
-        toast.error("Erro ao criar hábito.");
+        toast.error("Erro ao salvar hábito.");
       }
     }
   }
@@ -57,7 +102,7 @@ export default function HabitForm() {
     <form ref={formRef} action={action} className="flex flex-col gap-6 p-6 bg-zinc-900 rounded-2xl border border-zinc-800">
       <div className="flex flex-col gap-2">
           <label htmlFor="title" className="font-semibold leading-tight text-zinc-100">
-            Qual seu novo hábito?
+            {initialData ? 'Editar hábito' : 'Qual seu novo hábito?'}
           </label>
           <input
             name="title"
@@ -67,6 +112,22 @@ export default function HabitForm() {
             className="p-4 rounded-lg bg-zinc-800 text-white placeholder:text-zinc-400 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-zinc-900"
             required
             autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+      </div>
+
+      <div className="flex flex-col gap-2">
+          <label htmlFor="description" className="font-semibold leading-tight text-zinc-100">
+            Qual sua motivação?
+          </label>
+          <textarea
+            name="description"
+            id="description"
+            placeholder="ex.: Para ter mais energia durante o dia..."
+            className="p-4 rounded-lg bg-zinc-800 text-white placeholder:text-zinc-400 border border-zinc-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-zinc-900 resize-none h-24"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
       </div>
 
@@ -100,7 +161,7 @@ export default function HabitForm() {
         className="mt-6 rounded-lg bg-green-600 p-4 flex items-center justify-center gap-3 font-semibold hover:bg-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 focus:ring-offset-zinc-900"
       >
         <Check size={20}  />
-        Confirmar
+        {initialData ? 'Salvar alterações' : 'Confirmar'}
       </button>
     </form>
   );

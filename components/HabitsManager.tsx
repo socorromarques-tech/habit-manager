@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getHabits, deleteHabit } from '@/app/actions';
-import { Trash2, Plus, X } from 'lucide-react'; 
+import { Trash2, Plus, X, Pencil, Quote } from 'lucide-react'; 
 import { toast } from 'sonner';
 import { clsx } from 'clsx';
 import HabitForm from './HabitForm';
+import Link from 'next/link';
 
 const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
@@ -13,10 +14,11 @@ export default function HabitsManager({ onUpdate }: { onUpdate: () => void }) {
   const [habits, setHabits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<any | null>(null);
 
   useEffect(() => {
      loadHabits();
-  }, [isCreating]); // Reload when closing form
+  }, [isCreating, editingHabit]); 
 
   function loadHabits() {
     getHabits().then(h => {
@@ -30,21 +32,34 @@ export default function HabitsManager({ onUpdate }: { onUpdate: () => void }) {
     await deleteHabit(habitId);
     toast.success("Hábito removido.");
     loadHabits();
-    onUpdate(); // Refresh parent grid
+    onUpdate(); 
+  }
+  
+  function handleEdit(habit: any) {
+      setEditingHabit(habit);
+      setIsCreating(true); 
   }
 
-  if (isCreating) {
+  function closeForm() {
+      setIsCreating(false);
+      setEditingHabit(null);
+  }
+
+  if (isCreating || editingHabit) {
       return (
           <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4">
               <button 
-                onClick={() => setIsCreating(false)}
+                onClick={closeForm}
                 className="self-start text-xs font-bold text-zinc-400 hover:text-white flex items-center gap-1"
               >
                   <X size={14} /> Cancelar
               </button>
-              <h3 className="font-bold text-xl">Novo Hábito</h3>
-              {/* Reuse HabitForm, but maybe strip its container styling if needed, or wrap it */}
-              <HabitForm />
+              <h3 className="font-bold text-xl">{editingHabit ? 'Editar Hábito' : 'Novo Hábito'}</h3>
+              
+              <HabitForm 
+                 initialData={editingHabit} 
+                 onSuccess={closeForm}
+              />
           </div>
       )
   }
@@ -70,16 +85,36 @@ export default function HabitsManager({ onUpdate }: { onUpdate: () => void }) {
                 habits.map(habit => (
                     <div key={habit.id} className="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex flex-col gap-2 group hover:border-zinc-700 transition-colors">
                         <div className="flex justify-between items-start">
-                            <span className="font-bold text-lg leading-tight">{habit.title}</span>
-                            <button 
-                                onClick={() => handleDelete(habit.id)}
-                                className="text-zinc-600 hover:text-red-500 transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
+                            <Link href={`/habits/${habit.id}`} className="font-bold text-lg leading-tight hover:underline hover:text-green-400 transition-colors">
+                                {habit.title}
+                            </Link>
+                            
+                            <div className="flex items-center gap-1">
+                                <button 
+                                    onClick={() => handleEdit(habit)}
+                                    className="p-1 text-zinc-600 hover:text-violet-500 transition-colors"
+                                    title="Editar"
+                                >
+                                    <Pencil size={16} />
+                                </button>
+                                <button 
+                                    onClick={() => handleDelete(habit.id)}
+                                    className="p-1 text-zinc-600 hover:text-red-500 transition-colors"
+                                    title="Excluir"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="flex gap-1">
+                        {habit.description && (
+                            <div className="flex gap-2 items-start mt-1 mb-2 text-zinc-400 text-sm italic">
+                                <Quote size={12} className="min-w-[12px] mt-1 opacity-50" />
+                                <span className="line-clamp-2">{habit.description}</span>
+                            </div>
+                        )}
+
+                        <div className="flex gap-1 mt-auto">
                             {weekDays.map((day, i) => (
                                 <div 
                                     key={i}

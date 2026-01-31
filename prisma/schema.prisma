@@ -57,9 +57,12 @@ model Habit {
   id        String     @id @default(cuid())
   userId    String
   title     String
+  description String?  // Added description field
   createdAt DateTime   @default(now())
   goal      Int        @default(1)
   weekDays  Int[]      // 0=Sun, 1=Mon, ..., 6=Sat
+  category  String?
+  archivedAt DateTime?
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs      HabitLog[]
