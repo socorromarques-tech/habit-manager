@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br';
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
 dayjs.locale('pt-br');
@@ -86,9 +86,6 @@ export function MonthlyCalendar({ logs }: MonthlyCalendarProps) {
                             )}
                          >
                              {date.date()}
-                             {completed && <div className="absolute inset-0 flex items-center justify-center bg-green-500/10 rounded-lg animate-in fade-in zoom-in duration-300">
-                                 <Check size={18} className="text-green-200" strokeWidth={3} />
-                             </div>}
                          </div>
                      )
                  })}
