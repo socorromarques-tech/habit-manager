@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Habit Manager
 
-## Getting Started
+Aplicacao web para gerenciamento e acompanhamento de habitos diarios, com visualizacao estilo heatmap inspirada no GitHub/Rocketseat Ignite.
 
-First, run the development server:
+## Demo
 
+[habit-manager-three.vercel.app](https://habit-manager-three.vercel.app)
+
+## Sobre o Projeto
+
+Este projeto foi desenvolvido como exercicio pratico para aprendizado e consolidacao de conhecimentos em desenvolvimento web fullstack moderno. O objetivo foi construir uma aplicacao completa, do banco de dados ao deploy, utilizando tecnologias atuais do ecossistema React/Next.js.
+
+### Funcionalidades
+
+- **Autenticacao** com Google via NextAuth.js
+- **CRUD de habitos** com titulo, descricao, categoria e dias da semana
+- **Registro diario** de conclusao de habitos
+- **Visualizacao em heatmap** estilo GitHub (grid anual de contribuicoes)
+- **Calendario mensal** para historico detalhado de cada habito
+- **Sistema de streaks** (sequencias de dias consecutivos)
+- **Pagina de estatisticas** com:
+  - Total de habitos ativos
+  - Total de conclusoes
+  - Maior streak
+  - Taxa de conclusao (ultimos 30 dias)
+  - Grafico de conclusoes por dia da semana
+  - Progresso mensal
+- **Protecao de rotas** com middleware de autenticacao
+- **Loading skeletons** para melhor experiencia do usuario
+- **Design responsivo** e tema escuro
+
+## Tecnologias Utilizadas
+
+| Tecnologia | Uso |
+|------------|-----|
+| **Next.js 16** | Framework React com App Router |
+| **TypeScript** | Tipagem estatica |
+| **Prisma** | ORM para banco de dados |
+| **PostgreSQL** | Banco de dados relacional |
+| **NextAuth.js** | Autenticacao |
+| **Tailwind CSS** | Estilizacao |
+| **Day.js** | Manipulacao de datas |
+| **Lucide React** | Icones |
+| **Vercel** | Deploy e hospedagem |
+
+## Como Rodar Localmente
+
+### Pre-requisitos
+
+- Node.js 18+
+- PostgreSQL (local ou remoto)
+- Conta Google Cloud para OAuth
+
+### Instalacao
+
+1. Clone o repositorio:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/socorromarques-tech/habit-manager.git
+cd habit-manager
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instale as dependencias:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Configure as variaveis de ambiente:
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Edite o arquivo `.env` com suas credenciais:
+```env
+DATABASE_URL="postgresql://..."
+NEXTAUTH_SECRET="sua-chave-secreta"
+NEXTAUTH_URL="http://localhost:3000"
+GOOGLE_CLIENT_ID="seu-client-id"
+GOOGLE_CLIENT_SECRET="seu-client-secret"
+```
 
-## Learn More
+4. Execute as migracoes do banco:
+```bash
+npx prisma db push
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Inicie o servidor de desenvolvimento:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+6. Acesse [http://localhost:3000](http://localhost:3000)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Aprendizados
 
-## Deploy on Vercel
+Durante o desenvolvimento deste projeto, foram praticados:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **App Router do Next.js 16** com Server Components e Server Actions
+- **Autenticacao OAuth** com NextAuth.js e Google Provider
+- **Modelagem de dados** com Prisma e PostgreSQL
+- **Gerenciamento de estado** em Server Components
+- **Validacao de dados** com Zod
+- **Estilizacao moderna** com Tailwind CSS
+- **Deploy continuo** com Vercel integrado ao GitHub
+- **Boas praticas** de organizacao de codigo e componentizacao
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Melhorias Futuras (Ideias)
+
+- [ ] Notificacoes/lembretes
+- [ ] Exportar dados (CSV/JSON)
+- [ ] Tema claro/escuro
+- [ ] Compartilhar progresso
+- [ ] PWA (Progressive Web App)
+- [ ] Metas personalizadas por habito
+
+## Licenca
+
+Este projeto foi desenvolvido para fins educacionais.
+
+---
+
+Desenvolvido por [Maria do Socorro Marques](https://github.com/socorromarques-tech)
